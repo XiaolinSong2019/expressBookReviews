@@ -11,10 +11,30 @@ app.use(express.json());
 app.use("/customer",session({secret:"fingerprint_customer",resave: true, saveUninitialized: true}))
 
 app.use("/customer/auth/*", function auth(req,res,next){
-//Write the authenication mechanism here
+    // Check if the authorization object exists in the session
+    if (req.session.authorization) {
+        // Extract the token from the session authorization object
+        let token = req.session.authorization['accessToken'];
+
+        // Verify the JWT token
+        // Ensure "access" matches the exact secret string you used to sign the token in your login route
+        jwt.verify(token, "access", (err, user) => {
+            if (!err) {
+                // Token is valid; attach user payload to the request and proceed
+                req.user = user;
+                next();
+            } else {
+                // Token is invalid or expired
+                return res.status(403).json({ message: "User not authenticated" });
+            }
+        });
+    } else {
+        // No session data found (user hasn't logged in)
+        return res.status(403).json({ message: "User not logged in" });
+    }
 });
  
-const PORT =5000;
+const PORT = 5000;
 
 app.use("/customer", customer_routes);
 app.use("/", genl_routes);
